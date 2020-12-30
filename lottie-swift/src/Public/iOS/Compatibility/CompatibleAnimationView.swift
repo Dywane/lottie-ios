@@ -20,20 +20,37 @@ public final class CompatibleAnimation: NSObject {
   }
 
   @objc
-  public init(name: String, bundle: Bundle = Bundle.main) {
+  public init(name: String?, bundle: Bundle? = Bundle.main) {
     self.name = name
     self.bundle = bundle
+    filePath = nil
     super.init()
   }
-
+    
+  @objc
+  public init(filePath: String?) {
+    self.filePath = filePath;
+    name = nil
+    bundle = nil
+    super.init()
+  }
+    
   internal var animation: Animation? {
-    return Animation.named(name, bundle: bundle)
+    if let filePath = filePath {
+        return Animation.filepath(filePath)
+    }
+    if let animationName = name, let bundle = bundle {
+        return Animation.named(animationName, bundle: bundle)
+    }
+    
+    return nil
   }
 
   // MARK: Private
 
-  private let name: String
-  private let bundle: Bundle
+  private let name: String?
+  private let bundle: Bundle?
+  private let filePath: String?
 }
 
 /// An Objective-C compatible wrapper around Lottie's AnimationView.
