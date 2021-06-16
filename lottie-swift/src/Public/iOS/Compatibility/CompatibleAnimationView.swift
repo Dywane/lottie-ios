@@ -326,6 +326,7 @@ public final class CompatibleAnimationView: UIView {
     animationView.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
     animationView.leadingAnchor.constraint(equalTo: leadingAnchor).isActive = true
     animationView.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
+    animationView.backgroundBehavior = .pauseAndRestore
   }
 }
 #endif
