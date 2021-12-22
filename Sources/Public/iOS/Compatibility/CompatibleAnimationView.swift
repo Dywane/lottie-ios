@@ -32,6 +32,7 @@ public final class CompatibleAnimation: NSObject {
     super.init()
   }
     
+  // MARK: Internal
   internal var animation: Animation? {
     if let filePath = filePath {
         return Animation.filepath(filePath)
@@ -41,11 +42,6 @@ public final class CompatibleAnimation: NSObject {
     }
     
     return nil
-  }
-  // MARK: Internal
-
-  internal var animation: Animation? {
-    Animation.named(name, bundle: bundle)
   }
 
   @objc
