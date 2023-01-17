@@ -9,43 +9,47 @@ import Foundation
 #if os(iOS) || os(tvOS) || os(watchOS) || targetEnvironment(macCatalyst)
 import UIKit
 
-/**
- Lottie comes prepacked with a two Animated Controls, `AnimatedSwitch` and
- `AnimatedButton`. Both of these controls are built on top of `AnimatedControl`
-
- `AnimatedControl` is a subclass of `UIControl` that provides an interactive
- mechanism for controlling the visual state of an animation in response to
- user actions.
-
- The `AnimatedControl` will show and hide layers depending on the current
- `UIControl.State` of the control.
-
- Users of `AnimationControl` can set a Layer Name for each `UIControl.State`.
- When the state is change the `AnimationControl` will change the visibility
- of its layers.
-
- NOTE: Do not initialize directly. This is intended to be subclassed.
- */
+/// Lottie comes prepacked with a two Animated Controls, `AnimatedSwitch` and
+/// `AnimatedButton`. Both of these controls are built on top of `AnimatedControl`
+///
+/// `AnimatedControl` is a subclass of `UIControl` that provides an interactive
+/// mechanism for controlling the visual state of an animation in response to
+/// user actions.
+///
+/// The `AnimatedControl` will show and hide layers depending on the current
+/// `UIControl.State` of the control.
+///
+/// Users of `AnimationControl` can set a Layer Name for each `UIControl.State`.
+/// When the state is change the `AnimationControl` will change the visibility
+/// of its layers.
+///
+/// NOTE: Do not initialize directly. This is intended to be subclassed.
 open class AnimatedControl: UIControl {
 
   // MARK: Lifecycle
 
   // MARK: Initializers
 
-  public init(animation: Animation) {
-    animationView = AnimationView(animation: animation)
+  public init(
+    animation: LottieAnimation,
+    configuration: LottieConfiguration = .shared)
+  {
+    animationView = LottieAnimationView(
+      animation: animation,
+      configuration: configuration)
+
     super.init(frame: animation.bounds)
     commonInit()
   }
 
   public init() {
-    animationView = AnimationView()
+    animationView = LottieAnimationView()
     super.init(frame: .zero)
     commonInit()
   }
 
   required public init?(coder aDecoder: NSCoder) {
-    animationView = AnimationView()
+    animationView = LottieAnimationView()
     super.init(coder: aDecoder)
     commonInit()
   }
@@ -96,17 +100,15 @@ open class AnimatedControl: UIControl {
     super.cancelTracking(with: event)
   }
 
-  open func animationDidSet() {
-
-  }
+  open func animationDidSet() { }
 
   // MARK: Public
 
   /// The animation view in which the animation is rendered.
-  public let animationView: AnimationView
+  public let animationView: LottieAnimationView
 
   /// The animation backing the animated control.
-  public var animation: Animation? {
+  public var animation: LottieAnimation? {
     didSet {
       animationView.animation = animation
       animationView.bounds = animation?.bounds ?? .zero
@@ -154,9 +156,9 @@ open class AnimatedControl: UIControl {
     }
   }
 
-  // MARK: Fileprivate
+  // MARK: Private
 
-  fileprivate func commonInit() {
+  private func commonInit() {
     animationView.clipsToBounds = false
     clipsToBounds = true
     animationView.translatesAutoresizingMaskIntoConstraints = false
