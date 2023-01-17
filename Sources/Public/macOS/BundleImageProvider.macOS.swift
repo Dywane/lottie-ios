@@ -8,23 +8,19 @@
 #if os(macOS)
 import AppKit
 
-/**
- Provides an image for a lottie animation from a provided Bundle.
- */
+/// Provides an image for a lottie animation from a provided Bundle.
 public class BundleImageProvider: AnimationImageProvider {
 
   // MARK: Lifecycle
 
-  /**
-   Initializes an image provider with a bundle and an optional subpath.
-
-   Provides images for an animation from a bundle. Additionally the provider can
-   search a specific subpath for the images.
-
-   - Parameter bundle: The bundle containing images for the provider.
-   - Parameter searchPath: The subpath is a path within the bundle to search for image assets.
-
-   */
+  /// Initializes an image provider with a bundle and an optional subpath.
+  ///
+  /// Provides images for an animation from a bundle. Additionally the provider can
+  /// search a specific subpath for the images.
+  ///
+  /// - Parameter bundle: The bundle containing images for the provider.
+  /// - Parameter searchPath: The subpath is a path within the bundle to search for image assets.
+  ///
   public init(bundle: Bundle, searchPath: String?) {
     self.bundle = bundle
     self.searchPath = searchPath
@@ -33,14 +29,11 @@ public class BundleImageProvider: AnimationImageProvider {
   // MARK: Public
 
   public func imageForAsset(asset: ImageAsset) -> CGImage? {
-
     if
-      asset.name.hasPrefix("data:"),
-      let url = URL(string: asset.name),
-      let data = try? Data(contentsOf: url),
+      let data = Data(imageAsset: asset),
       let image = NSImage(data: data)
     {
-      return image.CGImage
+      return image.lottie_CGImage
     }
 
     let imagePath: String?
@@ -71,9 +64,10 @@ public class BundleImageProvider: AnimationImageProvider {
 
     guard let foundPath = imagePath, let image = NSImage(contentsOfFile: foundPath) else {
       /// No image found.
+      LottieLogger.shared.warn("Could not find image \"\(asset.name)\" in bundle")
       return nil
     }
-    return image.CGImage
+    return image.lottie_CGImage
   }
 
   // MARK: Internal

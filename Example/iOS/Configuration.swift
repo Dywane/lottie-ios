@@ -4,21 +4,25 @@
 import Foundation
 import Lottie
 
+// MARK: - Configuration
+
 final class Configuration {
 
-  /// Whether or not to use the new, experimental rendering engine
-  static var useNewRenderingEngine: Bool {
-    get { UserDefaults.standard.bool(forKey: #function) }
+  /// The rendering engine to use
+  static var renderingEngineOption: RenderingEngineOption {
+    get {
+      RenderingEngineOption(rawValue: UserDefaults.standard.string(forKey: #function) ?? "Automatic") ?? .automatic
+    }
     set {
-      UserDefaults.standard.set(newValue, forKey: #function)
+      UserDefaults.standard.set(newValue.rawValue, forKey: #function)
       applyCurrentConfiguration()
     }
   }
 
   /// Applies the current configuration (stored in UserDefaults)
-  /// to the singleton `Lottie.ExperimentalFeatureConfiguration.shared`
+  /// to the singleton `LottieConfiguration.shared`
   static func applyCurrentConfiguration() {
-    Lottie.ExperimentalFeatureConfiguration.shared.useNewRenderingEngine = useNewRenderingEngine
+    LottieConfiguration.shared.renderingEngine = renderingEngineOption
   }
 
 }

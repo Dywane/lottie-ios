@@ -1,6 +1,6 @@
 namespace :build do
   desc 'Builds all packages and executables'
-  task all: ['package:all', 'example:all']
+  task all: ['package:all', 'example:all', 'xcframework']
 
   desc 'Builds the Lottie package for supported platforms'
   namespace :package do
@@ -9,17 +9,17 @@ namespace :build do
 
     desc 'Builds the Lottie package for iOS'
     task :iOS do
-      xcodebuild('build -scheme Lottie -destination generic/platform=iOS')
+      xcodebuild('build -scheme "Lottie (iOS)" -destination generic/platform=iOS -workspace Lottie.xcworkspace')
     end
 
     desc 'Builds the Lottie package for macOS'
     task :macOS do
-      xcodebuild('build -scheme Lottie -destination generic/platform=macOS')
+      xcodebuild('build -scheme "Lottie (macOS)" -destination generic/platform=macOS -workspace Lottie.xcworkspace')
     end
 
     desc 'Builds the Lottie package for tvOS'
     task :tvOS do
-      xcodebuild('build -scheme Lottie -destination generic/platform=tvOS')
+      xcodebuild('build -scheme "Lottie (tvOS)" -destination generic/platform=tvOS -workspace Lottie.xcworkspace')
     end
   end
 
@@ -30,18 +30,42 @@ namespace :build do
 
     desc 'Builds the iOS Lottie Example app'
     task :iOS do
-      xcodebuild('build -scheme "Example (iOS)" -destination "platform=iOS Simulator,name=iPhone 8"')
+      xcodebuild('build -scheme "Example (iOS)" -destination "platform=iOS Simulator,name=iPhone 8" -workspace Lottie.xcworkspace')
     end
 
     desc 'Builds the macOS Lottie Example app'
     task :macOS do
-      xcodebuild('build -scheme "Example (macOS)"')
+      xcodebuild('build -scheme "Example (macOS)" -workspace Lottie.xcworkspace')
     end
 
     desc 'Builds the tvOS Lottie Example app'
     task :tvOS do
-      xcodebuild('build -scheme "Example (tvOS)" -destination "platform=tvOS Simulator,name=Apple TV"')
+      xcodebuild('build -scheme "Example (tvOS)" -destination "platform=tvOS Simulator,name=Apple TV" -workspace Lottie.xcworkspace')
     end
+  end
+
+  desc 'Builds an xcframework for all supported platforms'
+  task :xcframework do
+    sh 'rm -rf .build/archives'
+    xcodebuild('archive -workspace Lottie.xcworkspace -scheme "Lottie (iOS)" -destination generic/platform=iOS -archivePath ".build/archives/Lottie_iOS" SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES')
+    xcodebuild('archive -workspace Lottie.xcworkspace -scheme "Lottie (iOS)" -destination "generic/platform=iOS Simulator" -archivePath ".build/archives/Lottie_iOS_Simulator" SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES')
+    xcodebuild('archive -workspace Lottie.xcworkspace -scheme "Lottie (macOS)" -destination generic/platform=macOS -archivePath ".build/archives/Lottie_macOS" SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES')
+    xcodebuild('archive -workspace Lottie.xcworkspace -scheme "Lottie (tvOS)" -destination generic/platform=tvOS -archivePath ".build/archives/Lottie_tvOS" SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES')
+    xcodebuild('archive -workspace Lottie.xcworkspace -scheme "Lottie (tvOS)" -destination "generic/platform=tvOS Simulator" -archivePath ".build/archives/Lottie_tvOS_Simulator" SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES')
+    xcodebuild(
+      [
+        '-create-xcframework',
+        '-framework .build/archives/Lottie_iOS.xcarchive/Products/Library/Frameworks/Lottie.framework',
+        '-framework .build/archives/Lottie_iOS_Simulator.xcarchive/Products/Library/Frameworks/Lottie.framework',
+        '-framework .build/archives/Lottie_macOS.xcarchive/Products/Library/Frameworks/Lottie.framework',
+        '-framework .build/archives/Lottie_tvOS.xcarchive/Products/Library/Frameworks/Lottie.framework',
+        '-framework .build/archives/Lottie_tvOS_Simulator.xcarchive/Products/Library/Frameworks/Lottie.framework',
+        '-output .build/archives/Lottie.xcframework'
+      ].join(" "))
+    Dir.chdir('.build/archives') do
+      sh 'zip -r Lottie.xcframework.zip Lottie.xcframework'
+    end
+    sh 'swift package compute-checksum .build/archives/Lottie.xcframework.zip'
   end
 end
 
@@ -49,7 +73,7 @@ namespace :test do
   desc 'Tests the Lottie package for iOS'
   task :package do
     sh 'rm -rf Tests/Artifacts'
-    xcodebuild('test -scheme Lottie -destination "platform=iOS Simulator,name=iPhone 8" -resultBundlePath Tests/Artifacts/LottieTests.xcresult')
+    xcodebuild('test -scheme "Lottie (iOS)" -destination "platform=iOS Simulator,name=iPhone 8" -resultBundlePath Tests/Artifacts/LottieTests.xcresult')
   end
 
   desc 'Processes .xcresult artifacts from the most recent test:package execution'
@@ -68,27 +92,32 @@ namespace :test do
       # Build the LottieCarthage framework scheme
       sh 'carthage build --use-xcframeworks'
 
+      # Delete Carthage's derived data to verify that the built .xcframework doesn't depend on any
+      # side effects from building on this specific machine.
+      # https://github.com/airbnb/lottie-ios/issues/1492
+      sh 'rm -rf ~/Library/Caches/org.carthage.CarthageKit/DerivedData'
+
       # Build a test app that imports and uses the LottieCarthage framework
-      sh 'xcodebuild build -scheme CarthageTest -destination "platform=iOS Simulator,name=iPhone 8"'
+      xcodebuild('build -scheme CarthageTest -destination "platform=iOS Simulator,name=iPhone 8"')
+      xcodebuild('build -scheme CarthageTest-macOS')
+    end
+  end
+
+  desc 'Tests Swift Package Manager support'
+  task :spm do
+    Dir.chdir('script/test-spm') do
+      # Build for iOS, macOS, and tvOS using the targets defined in Package.swift
+      xcodebuild('build -scheme "Lottie" -destination generic/platform=iOS')
+      xcodebuild('build -scheme "Lottie" -destination generic/platform=macOS')
+      xcodebuild('build -scheme "Lottie" -destination generic/platform=tvOS')
     end
   end
 end
 
 namespace :lint do
   desc 'Lints swift files'
-  task swift: ['swift:swiftlint', 'swift:swiftformat']
-
-  desc 'Lints swift files'
-  namespace :swift do
-    desc 'Lints swift files using SwiftLint'
-    task :swiftlint do
-      sh 'mint run SwiftLint lint Sources Tests Example Package.swift --config script/lint/swiftlint.yml --strict'
-    end
-
-    desc 'Lints swift files using SwiftLint'
-    task :swiftformat do
-      sh 'mint run SwiftFormat Sources Tests Example Package.swift --config script/lint/airbnb.swiftformat --lint'
-    end
+  task :swift do
+    sh 'swift package --allow-writing-to-package-directory format --lint'
   end
 
   desc 'Lints the CocoaPods podspec'
@@ -98,13 +127,19 @@ namespace :lint do
 end
 
 namespace :format do
-  desc 'Runs SwiftFormat'
+  desc 'Formats swift files'
   task :swift do
-    sh 'mint run SwiftLint autocorrect Sources Tests Example Package.swift --config script/lint/swiftlint.yml'
-    sh 'mint run SwiftFormat Sources Tests Example Package.swift --config script/lint/airbnb.swiftformat'
+    sh 'swift package --allow-writing-to-package-directory format'
   end
 end
 
 def xcodebuild(command)
-  sh "set -o pipefail && xcodebuild #{command} | mint run xcbeautify"
+  # Check if the mint tool is installed -- if so, pipe the xcodebuild output through xcbeautify
+  `which mint`
+
+  if $?.success?
+    sh "set -o pipefail && xcodebuild #{command} | mint run thii/xcbeautify@0.10.2"
+  else
+    sh "xcodebuild #{command}"
+  end
 end

@@ -17,8 +17,8 @@ public typealias LottieCompletionBlock = (Bool) -> Void
 struct AnimationContext {
 
   init(
-    playFrom: CGFloat,
-    playTo: CGFloat,
+    playFrom: AnimationFrameTime,
+    playTo: AnimationFrameTime,
     closure: LottieCompletionBlock?)
   {
     self.playTo = playTo
@@ -26,10 +26,23 @@ struct AnimationContext {
     self.closure = AnimationCompletionDelegate(completionBlock: closure)
   }
 
-  var playFrom: CGFloat
-  var playTo: CGFloat
+  var playFrom: AnimationFrameTime
+  var playTo: AnimationFrameTime
   var closure: AnimationCompletionDelegate
 
+}
+
+// MARK: Equatable
+
+extension AnimationContext: Equatable {
+  /// Whether or not the two given `AnimationContext`s are functionally equivalent
+  ///  - This checks whether or not a completion handler was provided,
+  ///    but does not check whether or not the two completion handlers are equivalent.
+  static func == (_ lhs: AnimationContext, _ rhs: AnimationContext) -> Bool {
+    lhs.playTo == rhs.playTo
+      && lhs.playFrom == rhs.playFrom
+      && (lhs.closure.completionBlock == nil) == (rhs.closure.completionBlock == nil)
+  }
 }
 
 // MARK: - AnimationContextState
@@ -71,7 +84,7 @@ class AnimationCompletionDelegate: NSObject, CAAnimationDelegate {
 
   var animationLayer: RootAnimationLayer?
   var animationKey: String?
-  var ignoreDelegate: Bool = false
+  var ignoreDelegate = false
   var animationState: AnimationContextState = .playing
 
   let completionBlock: LottieCompletionBlock?
